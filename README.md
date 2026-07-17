@@ -82,3 +82,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## RMSNorm v0.1 Results
+
+The first milestone implements and evaluates RMSNorm with:
+
+- PyTorch Eager
+- PyTorch Native
+- `torch.compile`
+- Custom Triton kernel
+
+Benchmarks were collected on an NVIDIA GeForce RTX 4090 using three
+independent runs per data type. Reported P50 and P95 values are medians
+across the three runs.
+
+`rows` represents the flattened token dimension:
+
+```text
+rows = batch_size × sequence_length
+```
+
+The one-row `1×4096` case is used only for kernel-launch-overhead analysis
+and is excluded from the main speedup summary.
+
+| Data type | Median speedup vs PyTorch Native | Best speedup | Best shape |
+|---|---:|---:|---:|
+| FP16 | 4.91× | 5.33× | 128×4096 |
+| BF16 | 4.84× | 5.33× | 128×4096 |
+| FP32 | 2.12× | 2.93× | 128×4096 |
+
+![Triton RMSNorm speedup](results/figures/rmsnorm_triton_speedup.png)
+
+See the [full RMSNorm benchmark report](docs/rmsnorm_benchmark_report.md)
+for latency, P95, stability, numerical error, and effective-bandwidth results.

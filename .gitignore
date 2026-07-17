@@ -38,3 +38,13 @@ results/environment/*.txt
 # System
 .DS_Store
 Thumbs.db
+
+# Published RMSNorm benchmark artifacts
+!results/csv/rmsnorm_fp16_run*.csv
+!results/csv/rmsnorm_bf16_run*.csv
+!results/csv/rmsnorm_fp32_run*.csv
+!results/csv/rmsnorm_benchmark_all_runs.csv
+!results/csv/rmsnorm_benchmark_aggregate.csv
+!results/figures/rmsnorm_latency_*.png
+!results/figures/rmsnorm_triton_speedup.png
+!results/figures/rmsnorm_triton_stability.png
