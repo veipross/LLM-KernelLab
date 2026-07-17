@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Triton and PyTorch caches
+.triton/
+torch_extensions/
+
+# Generated benchmark results
+results/csv/*.csv
+results/figures/*.png
+results/figures/*.pdf
+results/environment/*.txt
+
+# Nsight outputs
+*.ncu-rep
+*.nsys-rep
+*.sqlite
+
+# System
+.DS_Store
+Thumbs.db
