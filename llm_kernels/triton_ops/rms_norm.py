@@ -62,11 +62,11 @@ def _rms_norm_forward_kernel(
 def _validate_inputs(x: Tensor, weight: Tensor, eps: float) -> None:
     """Validate inputs accepted by the first Triton RMSNorm version."""
 
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is not available.")
-
     if not x.is_cuda or not weight.is_cuda:
         raise ValueError("x and weight must both be CUDA tensors.")
+
+    if not torch.cuda.is_available():
+        raise RuntimeError("CUDA is not available.")
 
     if x.device != weight.device:
         raise ValueError(

@@ -1,117 +1,283 @@
 # LLM-KernelLab
 
-面向大模型推理的 Triton/CUDA 融合算子优化与性能评测项目。
+面向大语言模型（Large Language Model, LLM）推理优化的 GPU Kernel
+实验项目。
 
-## Project Goals
+本项目基于 **PyTorch + Triton** 实现并优化 Transformer
+推理中的关键算子，探索 GPU Kernel 优化技术，包括：
 
-本项目针对 Transformer 推理中的常用算子，分别实现：
+-   Triton GPU Kernel 开发
+-   算子融合（Operator Fusion）
+-   GPU Memory Access 优化
+-   Kernel Launch 开销降低
+-   性能 Benchmark 与分析
 
-- PyTorch Eager
-- torch.compile
-- Triton Kernel
-- CUDA C++ Extension
+# 项目背景
 
-并从以下维度进行统一评测：
+Transformer 类大模型推理过程中，大量计算时间消耗在少量高频算子上。
 
-- 数值正确性
-- GPU Kernel 延迟
-- P50 / P95 延迟
-- 有效显存带宽
-- 不同数据类型性能
-- 不同输入 Shape 性能
-- 相对 PyTorch 的加速比
-- Transformer Block 端到端性能
+本项目针对 LLM 推理中的典型算子：
 
-## Planned Operators
+-   RMSNorm
+-   Residual + RMSNorm
 
-- [ ] RMSNorm
-- [ ] Fused Residual + RMSNorm
-- [ ] SwiGLU
-- [ ] Rotary Position Embedding
-- [ ] Causal Softmax
-- [ ] Mini Transformer Block Integration
+实现不同执行方式：
 
-## Hardware
+-   PyTorch Eager
+-   PyTorch Native Operator
+-   torch.compile
+-   Triton Custom Kernel
 
-Initial benchmark platform:
+并通过 Benchmark 分析优化效果。
 
-- GPU: NVIDIA GeForce RTX 4090
-- Compute Capability: 8.9
-- CUDA Toolkit: 12.6
-- PyTorch: 2.7.1
-- Triton: 3.3.1
+# 当前进展
 
-## Repository Structure
+## v0.1.0 ------ RMSNorm Triton Kernel
 
-```text
-llm_kernels/
-├── torch_ops/
-├── triton_ops/
-└── cuda_ops/
+已完成版本。
 
-benchmarks/
-tests/
-integrations/
-docs/
-results/
+实现：
 
-## 4. 创建许可证
+-   PyTorch RMSNorm Reference 实现
+-   Triton RMSNorm Forward Kernel
+-   数值正确性验证
+-   多 Shape Benchmark
+-   多 Data Type 测试
+-   性能报告整理
 
-我们自己的代码使用 MIT License：
+支持：
 
-```bash
-cat > LICENSE <<'EOF'
-MIT License
+-   FP16
+-   BF16
+-   FP32
 
-Copyright (c) 2026 Zhang Yixiang
+实验环境：
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files, to deal in the Software
-without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the
-Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+-   GPU: NVIDIA GeForce RTX 4090
+-   PyTorch: 2.7.1+cu126
+-   Triton: 3.3.1
+-   CUDA: 12.6
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+完成闭环：
 
-THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+    Kernel 实现
 
-## RMSNorm v0.1 Results
+          ↓
 
-The first milestone implements and evaluates RMSNorm with:
+    正确性验证
 
-- PyTorch Eager
-- PyTorch Native
-- `torch.compile`
-- Custom Triton kernel
+          ↓
 
-Benchmarks were collected on an NVIDIA GeForce RTX 4090 using three
-independent runs per data type. Reported P50 and P95 values are medians
-across the three runs.
+    Benchmark 测试
 
-`rows` represents the flattened token dimension:
+          ↓
 
-```text
-rows = batch_size × sequence_length
+    性能分析
+
+# v0.2.0 ------ Fused Residual + RMSNorm
+
+当前版本。
+
+在 Transformer Block 中，经常存在：
+
+``` python
+hidden_states = hidden_states + residual
+hidden_states = RMSNorm(hidden_states)
 ```
 
-The one-row `1×4096` case is used only for kernel-launch-overhead analysis
-and is excluded from the main speedup summary.
+传统方式：
 
-| Data type | Median speedup vs PyTorch Native | Best speedup | Best shape |
-|---|---:|---:|---:|
-| FP16 | 4.91× | 5.33× | 128×4096 |
-| BF16 | 4.84× | 5.33× | 128×4096 |
-| FP32 | 2.12× | 2.93× | 128×4096 |
+    Residual Add Kernel
 
-![Triton RMSNorm speedup](results/figures/rmsnorm_triton_speedup.png)
+            +
 
-See the [full RMSNorm benchmark report](docs/rmsnorm_benchmark_report.md)
-for latency, P95, stability, numerical error, and effective-bandwidth results.
+    RMSNorm Kernel
+
+需要多个 GPU Kernel 调用。
+
+本版本实现：
+
+    Fused Residual + RMSNorm Triton Kernel
+
+将：
+
+-   Residual Addition
+-   RMSNorm
+
+融合为一次 GPU Kernel Launch。
+
+# v0.2.0 已实现功能
+
+完成：
+
+-   PyTorch Reference 实现
+-   Triton Fused Forward Kernel
+-   推理场景优化算子
+-   完整 Correctness Test
+-   Benchmark 测试框架
+-   实验环境自动记录
+
+测试结果：
+
+    pytest
+
+    112 passed
+
+# Benchmark 结果
+
+Benchmark 对比：
+
+  实现方式         说明
+  ---------------- ---------------
+  PyTorch Eager    基础实现
+  PyTorch Native   原生算子
+  torch.compile    编译优化
+  Triton Unfused   未融合 Triton
+  Triton Fused     融合 Kernel
+
+测试：
+
+-   FP16
+-   BF16
+-   FP32
+
+不同：
+
+-   batch size
+-   hidden dimension
+
+RTX 4090 实验结果：
+
+-   相比 PyTorch Native，最高约 3× 加速
+-   相比 Unfused Triton Kernel，在典型中小规模场景获得约 1.1～1.5× 加速
+
+实验结果：
+
+    results/
+
+    ├── csv/
+
+    └── environment/
+
+# 已支持算子
+
+已完成：
+
+-   [x] RMSNorm
+-   [x] Fused Residual + RMSNorm
+
+计划：
+
+-   [ ] SwiGLU
+-   [ ] Rotary Position Embedding
+-   [ ] Causal Softmax
+-   [ ] 更多 Transformer 推理算子
+
+# 项目结构
+
+    LLM-KernelLab/
+
+    ├── llm_kernels/
+    │
+    │   ├── torch_ops/
+    │   │   ├── rms_norm.py
+    │   │   └── fused_residual_rms_norm.py
+    │   │
+    │   ├── triton_ops/
+    │   │   ├── rms_norm.py
+    │   │   └── fused_residual_rms_norm.py
+    │
+    ├── benchmarks/
+    │
+    ├── tests/
+    │
+    ├── scripts/
+    │
+    ├── docs/
+    │
+    └── results/
+
+# 安装
+
+创建环境：
+
+``` bash
+conda create -n kernel-lab python=3.10
+
+conda activate kernel-lab
+```
+
+安装依赖：
+
+``` bash
+pip install -r requirements.txt
+```
+
+# 测试
+
+运行：
+
+``` bash
+pytest -q
+```
+
+当前：
+
+    112 passed
+
+# Benchmark
+
+RMSNorm：
+
+``` bash
+python benchmarks/benchmark_rmsnorm.py
+```
+
+Fused Residual RMSNorm：
+
+``` bash
+python benchmarks/benchmark_fused_residual_rmsnorm.py
+```
+
+# 技术说明
+
+## 为什么使用 Triton？
+
+Triton 可以：
+
+-   自定义 GPU Kernel
+-   优化 Memory Access Pattern
+-   减少 Kernel Launch
+-   实现算子融合
+
+## 为什么进行 Kernel Fusion？
+
+传统执行：
+
+    Operation A
+
+    ↓
+
+    写入 Intermediate Tensor
+
+    ↓
+
+    Operation B
+
+融合执行：
+
+    Operation A + Operation B
+
+    ↓
+
+    Single Kernel Launch
+
+减少：
+
+-   中间 Tensor 创建
+-   Global Memory 访问
+-   Kernel Launch 开销
+
+# License
+
+MIT License

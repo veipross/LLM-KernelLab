@@ -10,7 +10,7 @@ from llm_kernels.torch_ops import TorchRMSNorm, rms_norm_reference
 from llm_kernels.triton_ops import rms_norm_triton
 
 
-pytestmark = pytest.mark.skipif(
+requires_cuda = pytest.mark.skipif(
     not torch.cuda.is_available(),
     reason="RMSNorm Triton tests require an NVIDIA CUDA GPU.",
 )
@@ -44,6 +44,8 @@ def tolerances(dtype: torch.dtype) -> tuple[float, float]:
     return 1e-5, 1e-5
 
 
+@pytest.mark.cuda
+@requires_cuda
 @pytest.mark.parametrize("shape", TEST_SHAPES)
 @pytest.mark.parametrize("dtype", TEST_DTYPES)
 def test_triton_matches_reference(
@@ -71,6 +73,8 @@ def test_triton_matches_reference(
     )
 
 
+@pytest.mark.cuda
+@requires_cuda
 @pytest.mark.parametrize("shape", TEST_SHAPES)
 @pytest.mark.parametrize("dtype", TEST_DTYPES)
 def test_reference_matches_pytorch_functional(
@@ -102,6 +106,35 @@ def test_reference_matches_pytorch_functional(
 
 
 @pytest.mark.parametrize("dtype", TEST_DTYPES)
+def test_reference_matches_pytorch_functional_cpu(
+    dtype: torch.dtype,
+) -> None:
+    torch.manual_seed(2026)
+
+    shape = (2, 7, 128)
+    x = torch.randn(shape, dtype=dtype)
+    weight = torch.randn(shape[-1], dtype=dtype)
+
+    expected = F.rms_norm(
+        x,
+        normalized_shape=(shape[-1],),
+        weight=weight,
+        eps=1e-6,
+    )
+    actual = rms_norm_reference(x, weight, eps=1e-6)
+
+    rtol, atol = tolerances(dtype)
+    torch.testing.assert_close(
+        actual,
+        expected,
+        rtol=rtol,
+        atol=atol,
+    )
+
+
+@pytest.mark.cuda
+@requires_cuda
+@pytest.mark.parametrize("dtype", TEST_DTYPES)
 def test_output_metadata(dtype: torch.dtype) -> None:
     device = torch.device("cuda")
 
@@ -126,6 +159,8 @@ def test_output_metadata(dtype: torch.dtype) -> None:
     assert output.is_contiguous()
 
 
+@pytest.mark.cuda
+@requires_cuda
 def test_torch_module_forward() -> None:
     device = torch.device("cuda")
 
@@ -155,6 +190,23 @@ def test_torch_module_forward() -> None:
     )
 
 
+def test_torch_module_forward_cpu() -> None:
+    module = TorchRMSNorm(
+        hidden_size=128,
+        eps=1e-6,
+        dtype=torch.float32,
+    )
+
+    x = torch.randn(2, 7, 128, dtype=torch.float32)
+
+    expected = rms_norm_reference(x, module.weight, module.eps)
+    actual = module(x)
+
+    torch.testing.assert_close(actual, expected)
+
+
+@pytest.mark.cuda
+@requires_cuda
 def test_invalid_weight_size() -> None:
     device = torch.device("cuda")
 
@@ -174,6 +226,25 @@ def test_invalid_weight_size() -> None:
         rms_norm_triton(x, weight)
 
 
+def test_reference_invalid_weight_size_cpu() -> None:
+    x = torch.randn(4, 128, dtype=torch.float32)
+    weight = torch.ones(64, dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="weight size"):
+        rms_norm_reference(x, weight)
+
+
+@pytest.mark.parametrize("eps", [0.0, -1e-6])
+def test_reference_non_positive_eps_cpu(eps: float) -> None:
+    x = torch.randn(4, 128, dtype=torch.float32)
+    weight = torch.ones(128, dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="positive"):
+        rms_norm_reference(x, weight, eps=eps)
+
+
+@pytest.mark.cuda
+@requires_cuda
 def test_dtype_mismatch() -> None:
     device = torch.device("cuda")
 
@@ -193,6 +264,8 @@ def test_dtype_mismatch() -> None:
         rms_norm_triton(x, weight)
 
 
+@pytest.mark.cuda
+@requires_cuda
 def test_non_contiguous_input_rejected() -> None:
     device = torch.device("cuda")
 
