@@ -11,3 +11,5 @@ matplotlib
 tabulate
 psutil
 pybind11
+
+transformers==5.14.1
