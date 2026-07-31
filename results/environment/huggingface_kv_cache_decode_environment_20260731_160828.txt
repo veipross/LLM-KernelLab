@@ -1,0 +1,68 @@
+LLM-KernelLab Hugging Face True KV-Cache Decode Benchmark
+============================================================================
+timestamp: 2026-07-31T16:08:28
+git_commit: 05c346d
+platform: Linux-6.8.0-59-generic-x86_64-with-glibc2.35
+python: 3.10.20 (main, Jun 11 2026, 15:17:37) [GCC 14.3.0]
+pytorch: 2.7.1+cu126
+pytorch_cuda: 12.6
+triton: 3.3.1
+transformers: 5.14.1
+gpu: NVIDIA GeForce RTX 4090
+compute_capability: 8.9
+gpu_memory_gib: 23.51
+multiprocessors: 128
+run_index: 1
+families: llama,qwen2
+dtypes: fp16,bf16
+prefill_lengths: 32,128,512
+batch_size: 1
+warmup_iterations: 20
+measure_iterations: 100
+validation_decode_steps: 4
+model_hidden_size: 512
+model_intermediate_size: 1376
+model_layers: 4
+model_attention_heads: 8
+model_key_value_heads: 4
+model_vocab_size: 2048
+model_max_position_embeddings: 2048
+timing: CUDA events
+decode_cache_policy: DynamicCache.crop(prefill_length) outside timing
+external_weights_downloaded: false
+
+===== nvidia-smi =====
+Fri Jul 31 16:08:28 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.65.06              Driver Version: 580.65.06      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:01:00.0  On |                  Off |
+|  0%   50C    P8             20W /  450W |     765MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            3080      G   /usr/lib/xorg/Xorg                      389MiB |
+|    0   N/A  N/A            3272      G   /usr/bin/gnome-shell                     46MiB |
+|    0   N/A  N/A            3479      G   .../sunloginclient --cmd=autorun         19MiB |
+|    0   N/A  N/A            4075      G   ...me/58.0.3029.81 Safari/537.36          6MiB |
+|    0   N/A  N/A            4170      G   ...09CB033F103590C0598C9CA7D6185         17MiB |
+|    0   N/A  N/A            9778      G   ...rack-uuid=3190708988185955192         80MiB |
+|    0   N/A  N/A           10801      G   ...ns-seed-version --log-level=2         18MiB |
+|    0   N/A  N/A           11996      G   .../8702/usr/lib/firefox/firefox         47MiB |
++-----------------------------------------------------------------------------------------+
+
+===== nvcc =====
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2024 NVIDIA Corporation
+Built on Tue_Oct_29_23:50:19_PDT_2024
+Cuda compilation tools, release 12.6, V12.6.85
+Build cuda_12.6.r12.6/compiler.35059454_0
