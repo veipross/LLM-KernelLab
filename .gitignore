@@ -48,3 +48,7 @@ Thumbs.db
 !results/figures/rmsnorm_latency_*.png
 !results/figures/rmsnorm_triton_speedup.png
 !results/figures/rmsnorm_triton_stability.png
+
+# Local benchmark diagnostics
+results/logs/
+results/quick_validation/
